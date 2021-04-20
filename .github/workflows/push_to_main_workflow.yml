@@ -1,0 +1,59 @@
+name: Push to main branch workflow
+
+on:
+  push:
+    branches:
+      - 'main'
+  workflow_dispatch:
+
+jobs:
+  artifact:
+    runs-on: ubuntu-latest
+    name: Publish Docker image to Github Packages and deploy it to DO Droplet
+    steps:
+      - uses: actions/checkout@v1
+      - name: Set up JDK 1.8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+      - name: Export env variables and package
+        run: |
+          export GITHUB_USERNAME=${{github.actor}} GITHUB_PASSWORD=${{secrets.GITHUB_TOKEN}}
+          VARS='$GITHUB_USERNAME:$GITHUB_PASSWORD'
+          envsubst "$VARS" < .mvn/settings.xml > user_settings.xml
+          mvn -s user_settings.xml -U -B clean package
+      - name: Push to GitHub Packages
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{github.actor}}
+          password: ${{secrets.GITHUB_TOKEN}}
+          tags: latest
+          registry: docker.pkg.github.com
+          repository: netcracker-education-center/data-collector/data_collector
+          tag_with_ref: true
+
+  deploy:
+    runs-on: ubuntu-latest
+    name: Run image as a container
+    needs: artifact
+    steps:
+      - name: Install Docker image from Github Packages and Run
+        uses: appleboy/ssh-action@v0.1.2
+        with:
+          host: ${{secrets.SSH_HOST}}
+          key: ${{secrets.SSH_KEY}}
+          username: ${{secrets.SSH_USERNAME}}
+          passphrase: ${{secrets.PASSPHRASE}}
+          script: |
+            cd netcracker/collect-and-search/data-collector
+            docker login https://docker.pkg.github.com -u ${{github.repository_owner}} -p ${{secrets.GITHUB_TOKEN}}
+            docker container stop $(docker ps -aqf "name=data_collector")
+            docker container rm $(docker ps -aqf "name=data_collector")
+            docker image rm netcracker/data_collector
+            docker image rm docker.pkg.github.com/netcracker-education-center/data-collector/data_collector
+            docker pull docker.pkg.github.com/netcracker-education-center/data-collector/data_collector:latest
+            docker tag docker.pkg.github.com/netcracker-education-center/data-collector/data_collector:latest netcracker/data_collector:latest
+            # getting json one-liner from the file
+            CONFIG_JSON=$(sed 's/},{/},\n{/g' app_config.json)
+            # -d means that container starts in detached mode or in the background
+            docker run --env APP_CONFIG_JSON=CONFIG_JSON -d --name data_collector -p 8000:8000 -p 9090:9090  --network=docker-network netcracker/data_collector:latest -v netcracker/collect-and-search/data-collector/log:/log
