@@ -45,13 +45,13 @@ jobs:
           username: ${{secrets.SSH_USERNAME}}
           passphrase: ${{secrets.PASSPHRASE}}
           script: |
-            cd netcracker/collect-and-search/data-collector
+            cd netcracker/collect-and-search/data-miner
             docker login https://docker.pkg.github.com -u ${{github.repository_owner}} -p ${{secrets.GITHUB_TOKEN}}
-            docker container stop $(docker ps -aqf "name=data_collector")
-            docker container rm $(docker ps -aqf "name=data_collector")
-            docker image rm netcracker/data_collector
-            docker image rm docker.pkg.github.com/netcracker-education-center/data-collector/data_collector
-            docker pull docker.pkg.github.com/netcracker-education-center/data-collector/data_collector:latest
-            docker tag docker.pkg.github.com/netcracker-education-center/data-collector/data_collector:latest netcracker/data_collector:latest
+            docker container stop $(docker ps -aqf "name=data_miner")
+            docker container rm $(docker ps -aqf "name=data_miner")
+            docker image rm netcracker/data_miner
+            docker image rm docker.pkg.github.com/netcracker-education-center/data-miner/data_miner
+            docker pull docker.pkg.github.com/netcracker-education-center/data-miner/data_miner:latest
+            docker tag docker.pkg.github.com/netcracker-education-center/data-miner/data_miner:latest netcracker/data_miner:latest
             # -d means that container starts in detached mode or in the background
-            docker run -d --name data_collector -p 8000:8000 -p 9090:9090  --network=docker-network netcracker/data_collector:latest -v netcracker/collect-and-search/data-collector/log:/log
+            docker run -d --name data_miner -p 8000:8000 -p 9090:9090  --network=docker-network netcracker/data_miner:latest -v netcracker/collect-and-search/data-miner/log:/log
