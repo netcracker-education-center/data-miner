@@ -121,7 +121,7 @@ public class DataMinerService {
 
             for (FTPFileData ftpFileData : fileInfo) {
                 ElasticsearchDocument ftpFileObject = new ElasticsearchDocument(requestNumber,
-                        getFtpUrl(ftpFileData.getServer(), path), ModelType.FILE, ftpFileData.getServer(),
+                        getFtpUrl(ftpFileData.getServer(), path), ModelType.FILE, ftpFileData.getFilename(),
                         ftpFileData.getText(), Collections.emptyList(), ftpFileData.getModificationDate());
                 try {
                     elasticsearchOperations.insert(ftpFileObject, ftpFileObject.getId(), DataMinerConstants.FTP_INDEX);
