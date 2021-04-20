@@ -53,7 +53,5 @@ jobs:
             docker image rm docker.pkg.github.com/netcracker-education-center/data-collector/data_collector
             docker pull docker.pkg.github.com/netcracker-education-center/data-collector/data_collector:latest
             docker tag docker.pkg.github.com/netcracker-education-center/data-collector/data_collector:latest netcracker/data_collector:latest
-            # getting json one-liner from the file
-            CONFIG_JSON=$(sed 's/},{/},\n{/g' app_config.json)
             # -d means that container starts in detached mode or in the background
-            docker run --env APP_CONFIG_JSON=CONFIG_JSON -d --name data_collector -p 8000:8000 -p 9090:9090  --network=docker-network netcracker/data_collector:latest -v netcracker/collect-and-search/data-collector/log:/log
+            docker run -d --name data_collector -p 8000:8000 -p 9090:9090  --network=docker-network netcracker/data_collector:latest -v netcracker/collect-and-search/data-collector/log:/log
