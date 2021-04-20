@@ -1,15 +1,18 @@
 package org.netcracker.learningcenter.services.dataminer;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.net.ftp.FTPFileFilter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.netcracker.educationcenter.elasticsearch.connection.Connection;
-import org.netcracker.educationcenter.elasticsearch.database.model.FTPFileObject;
-import org.netcracker.educationcenter.elasticsearch.database.model.JiraIssue;
+import org.netcracker.educationcenter.elasticsearch.database.model.ElasticsearchDocument;
+import org.netcracker.educationcenter.elasticsearch.database.operations.DocumentModelOperations;
 import org.netcracker.educationcenter.elasticsearch.database.operations.ElasticsearchOperations;
 import org.netcracker.educationcenter.elasticsearch.database.operations.ElasticsearchOperationsException;
-import org.netcracker.educationcenter.elasticsearch.database.operations.FTPFileObjectOperations;
-import org.netcracker.educationcenter.elasticsearch.database.operations.JiraIssueOperations;
+import org.netcracker.educationcenter.elasticsearch.enums.ModelType;
+import org.netcracker.learningcenter.confluence.ConfluenceClient;
+import org.netcracker.learningcenter.confluence.ConfluencePageModel;
 import org.netcracker.learningcenter.jira.JiraClientWorker;
 import org.netcracker.learningcenter.jira.SimpleIssue;
 import org.netcracker.learningcenter.reader.ReaderFactory;
@@ -26,6 +29,7 @@ import java.nio.file.Files;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -39,6 +43,12 @@ import java.util.Properties;
 @PropertySource("/application.properties")
 public class DataMinerService {
     private static final Logger LOG = LogManager.getLogger();
+
+    /**
+     * ObjectMapper instance.
+     */
+    @Autowired
+    private ObjectMapper objectMapper;
 
     /**
      * Reader factory instance to get reader for a specific file
@@ -71,8 +81,7 @@ public class DataMinerService {
     }
 
     /**
-     * Reads files from FTP server using FtpClient instance,
-     * then adds file data to Elasticsearch database as FTPFileObject models
+     * Reads files from FTP server using FtpClient instance, then adds file data to Elasticsearch database
      *
      * @param client FtpClient instance to make a connection, and download files from server
      * @param path path to the directory on the FTP server to download files from there
@@ -108,13 +117,14 @@ public class DataMinerService {
                 LOG.error("Something went wrong while interacting with file", e);
             }
 
-            ElasticsearchOperations elasticsearchOperations = new FTPFileObjectOperations(connection);
+            ElasticsearchOperations elasticsearchOperations = new DocumentModelOperations(connection);
 
             for (FTPFileData ftpFileData : fileInfo) {
-                FTPFileObject ftpFileObject = new FTPFileObject(requestNumber, "FTPServer",
-                        ftpFileData.getServer(), ftpFileData.getText(), ftpFileData.getModificationDate());
+                ElasticsearchDocument ftpFileObject = new ElasticsearchDocument(requestNumber,
+                        getFtpUrl(ftpFileData.getServer(), path), ModelType.FILE, ftpFileData.getServer(),
+                        ftpFileData.getText(), Collections.emptyList(), ftpFileData.getModificationDate());
                 try {
-                    elasticsearchOperations.insert(ftpFileObject, ftpFileObject.getId());
+                    elasticsearchOperations.insert(ftpFileObject, ftpFileObject.getId(), DataMinerConstants.FTP_INDEX);
                 } catch (ElasticsearchOperationsException e) {
                     LOG.error("Something went wrong while inserting ftp file object into Elasticsearch database", e);
                 }
@@ -125,11 +135,22 @@ public class DataMinerService {
     }
 
     /**
-     * Gets relevant Jira-issues, then adds them to Elasticsearch database as JiraIssue models
+     * Creates URL to file on FTP-server
+     *
+     * @param server server ip address
+     * @param path path to the directory on the FTP server
+     * @return link to the file
+     */
+    private String getFtpUrl(String server, String path) {
+        return "ftp://" + server + "/" + path;
+    }
+
+    /**
+     * Gets relevant Jira-issues, then adds them to Elasticsearch database
      *
      * @param login login of the Jira account
      * @param password password of the Jira account
-     * @param jiraUrl jira url
+     * @param jiraUrl Jira URL
      * @param keywords keywords used to select the desired (relevant) Jira-issues
      * @param issuesDate latest Jira-issue date
      * @param issuesStatus relevant Jira-issue status
@@ -143,12 +164,13 @@ public class DataMinerService {
         try (Connection connection = new Connection(properties)) {
             connection.makeConnection();
 
-            ElasticsearchOperations elasticsearchOperations = new JiraIssueOperations(connection);
+            ElasticsearchOperations elasticsearchOperations = new DocumentModelOperations(connection);
 
             for (SimpleIssue simpleIssue : simpleIssues) {
-                JiraIssue jiraIssue = new JiraIssue(requestNumber, simpleIssue.getIssueWebLink(),
-                        simpleIssue.getTitle(), simpleIssue.getBody(), simpleIssue.getComments());
-                elasticsearchOperations.insert(jiraIssue, jiraIssue.getId());
+                ElasticsearchDocument jiraIssue = new ElasticsearchDocument(requestNumber,
+                        simpleIssue.getIssueWebLink(), ModelType.TICKET, simpleIssue.getTitle(), simpleIssue.getBody(),
+                        simpleIssue.getComments(), simpleIssue.getModificationDate());
+                elasticsearchOperations.insert(jiraIssue, jiraIssue.getId(), DataMinerConstants.JIRA_INDEX);
             }
         } catch (ElasticsearchOperationsException e) {
             LOG.error("Something went wrong while inserting jira issue into Elasticsearch database", e);
@@ -158,11 +180,11 @@ public class DataMinerService {
     }
 
     /**
-     * Gets relevant Jira-issues, then adds them to Elasticsearch database as JiraIssue models
+     * Gets relevant Jira-issues, then adds them to Elasticsearch database
      *
      * @param login login of the Jira account
      * @param password password of the Jira account
-     * @param jiraUrl jira url
+     * @param jiraUrl Jira URL
      * @param jql user defined JQL to search Jira-issues
      * @param requestNumber current request number (id)
      */
@@ -172,13 +194,80 @@ public class DataMinerService {
         try (Connection connection = new Connection(properties)) {
             connection.makeConnection();
 
-            ElasticsearchOperations elasticsearchOperations = new JiraIssueOperations(connection);
+            ElasticsearchOperations elasticsearchOperations = new DocumentModelOperations(connection);
 
             for (SimpleIssue simpleIssue : simpleIssues) {
-                JiraIssue jiraIssue = new JiraIssue(requestNumber, simpleIssue.getIssueWebLink(),
-                        simpleIssue.getTitle(), simpleIssue.getBody(), simpleIssue.getComments());
-                elasticsearchOperations.insert(jiraIssue, jiraIssue.getId());
+                ElasticsearchDocument jiraIssue = new ElasticsearchDocument(requestNumber,
+                        simpleIssue.getIssueWebLink(), ModelType.TICKET, simpleIssue.getTitle(), simpleIssue.getBody(),
+                        simpleIssue.getComments(), simpleIssue.getModificationDate());
+                elasticsearchOperations.insert(jiraIssue, jiraIssue.getId(), DataMinerConstants.JIRA_INDEX);
             }
+        } catch (ElasticsearchOperationsException e) {
+            LOG.error("Something went wrong while inserting jira issue into Elasticsearch database", e);
+        } catch (Exception e) {
+            LOG.error("Something went wrong while connecting to Elasticsearch", e);
+        }
+    }
+
+    /**
+     * Gets relevant Confluence-pages, then adds them to Elasticsearch database
+     *
+     * @param token Confluence token
+     * @param confluenceUrl Confluence URL
+     * @param keywords keywords used to select the desired (relevant) Confluence-pages
+     * @param pagesDate latest Confluence-page date
+     * @param requestNumber current request number (id)
+     */
+    public void addConfluencePagesUsingKeywords(String token, String confluenceUrl, List<String> keywords,
+                                                String pagesDate, String requestNumber) {
+        try (Connection connection = new Connection(properties)) {
+            List<ConfluencePageModel> pageModels = new ConfluenceClient(confluenceUrl, token, objectMapper).
+                    findByKeywords(keywords, pagesDate);
+            connection.makeConnection();
+
+            ElasticsearchOperations elasticsearchOperations = new DocumentModelOperations(connection);
+
+            for (ConfluencePageModel confluencePageModel : pageModels) {
+                ElasticsearchDocument confluencePage = new ElasticsearchDocument(requestNumber,
+                        confluencePageModel.getWebLink(), ModelType.TICKET, confluencePageModel.getTitle(),
+                        confluencePageModel.getBody(), confluencePageModel.getComments(),
+                        confluencePageModel.getModificationDate());
+                elasticsearchOperations.insert(confluencePage, confluencePage.getId(), DataMinerConstants.CONFLUENCE_INDEX);
+            }
+        } catch (JsonProcessingException e) {
+            LOG.error("Something went wrong while processing JSON", e);
+        } catch (ElasticsearchOperationsException e) {
+            LOG.error("Something went wrong while inserting jira issue into Elasticsearch database", e);
+        } catch (Exception e) {
+            LOG.error("Something went wrong while connecting to Elasticsearch", e);
+        }
+    }
+
+    /**
+     * Gets relevant Confluence-pages, then adds them to Elasticsearch database
+     *
+     * @param token Confluence token
+     * @param confluenceUrl Confluence URL
+     * @param cql user defined CQL to search Jira-issues
+     * @param requestNumber current request number (id)
+     */
+    public void addConfluencePagesUsingCql(String token, String confluenceUrl, String cql, String requestNumber) {
+        try (Connection connection = new Connection(properties)) {
+            List<ConfluencePageModel> pageModels = new ConfluenceClient(confluenceUrl, token, objectMapper).
+                    findByCQL(cql);
+            connection.makeConnection();
+
+            ElasticsearchOperations elasticsearchOperations = new DocumentModelOperations(connection);
+
+            for (ConfluencePageModel confluencePageModel : pageModels) {
+                ElasticsearchDocument confluencePage = new ElasticsearchDocument(requestNumber,
+                        confluencePageModel.getWebLink(), ModelType.TICKET, confluencePageModel.getTitle(),
+                        confluencePageModel.getBody(), confluencePageModel.getComments(),
+                        confluencePageModel.getModificationDate());
+                elasticsearchOperations.insert(confluencePage, confluencePage.getId(), DataMinerConstants.CONFLUENCE_INDEX);
+            }
+        } catch (JsonProcessingException e) {
+            LOG.error("Something went wrong while processing JSON", e);
         } catch (ElasticsearchOperationsException e) {
             LOG.error("Something went wrong while inserting jira issue into Elasticsearch database", e);
         } catch (Exception e) {
