@@ -13,17 +13,32 @@ public final class DataMinerConstants {
     public static final String HOSTNAME_PROPERTY_NAME = "hostname";
 
     /**
-     * Scheme property name
+     * Elasticsearch scheme property name
      */
     public static final String SCHEME_PROPERTY_NAME = "scheme";
 
     /**
-     * First port property name.
+     * Elasticsearch first port property name.
      */
     public static final String PORT1_PROPERTY_NAME = "port1";
 
     /**
-     * Second port property name.
+     * Elasticsearch second port property name.
      */
     public static final String PORT2_PROPERTY_NAME = "port2";
+
+    /**
+     * Elasticsearch document index for Jira-issues
+     */
+    public static final String JIRA_INDEX = "jiraissues";
+
+    /**
+     * Elasticsearch document index for FTP-server files
+     */
+    public static final String FTP_INDEX = "ftpfileobjects";
+
+    /**
+     * Elasticsearch document index for Confluence-pages
+     */
+    public static final String CONFLUENCE_INDEX = "confluencepages";
 }
