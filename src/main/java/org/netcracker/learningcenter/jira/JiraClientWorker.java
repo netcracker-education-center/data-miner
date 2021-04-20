@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.netcracker.learningcenter.collector.interfaces.ICollector;
 
 import java.net.URI;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -97,7 +98,7 @@ public class JiraClientWorker implements ICollector {
                     comments.add(comment.getBody());
                 }
                 issues.add(new SimpleIssue(issue.getKey(), createWebLink(jiraUrl, issue.getKey()),
-                        issue.getSummary(), issue.getDescription(), comments));
+                        issue.getSummary(), issue.getDescription(), comments, issue.getUpdateDate().toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate()));
             }
         });
         return issues;
@@ -142,7 +143,7 @@ public class JiraClientWorker implements ICollector {
                     }
 
                     SimpleIssue relevantIssue = new SimpleIssue(issue.getKey(), createWebLink(jiraUrl, issue.getKey()),
-                            issue.getSummary(), issue.getDescription(), comments);
+                            issue.getSummary(), issue.getDescription(), comments, issue.getUpdateDate().toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
                     if (!addedKeys.contains(relevantIssue.getIssueKey())) {
                         issues.add(relevantIssue);
                         addedKeys.add(relevantIssue.getIssueKey());
@@ -179,7 +180,7 @@ public class JiraClientWorker implements ICollector {
                 }
 
                 issues.add(new SimpleIssue(issue.getKey(), createWebLink(jiraUrl, issue.getKey()), issue.getSummary(),
-                        issue.getDescription(), comments));
+                        issue.getDescription(), comments, issue.getUpdateDate().toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate()));
             }
         });
         return issues;

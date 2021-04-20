@@ -23,7 +23,8 @@ public class ConfluenceUtils {
     public static final String EXPAND = "expand";
     public static final String CQL = "cql";
     public static final String HISTORY = "history";
-    public static final String CREATED_DATE = "createdDate";
+    public static final String LAST_UPDATED = "lastUpdated";
+    public static final String WHEN = "when";
 
     public static List<ConfluencePageModel> jsonToPageModelList(JsonNode node,String url) {
         List<ConfluencePageModel> pages = new ArrayList<>();
@@ -38,7 +39,7 @@ public class ConfluenceUtils {
         String title = node.path(TITLE_PATH).asText();
         String webLink = url + node.path(LINKS_PATH).path(WEBUI_PATH).asText();
         String body = Jsoup.parse(node.path(BODY_PATH).path(STORAGE_PATH).path(VALUE_PATH).asText()).text();
-        String date = node.path(HISTORY).path(CREATED_DATE).asText();
+        String date = node.path(HISTORY).path(LAST_UPDATED).path(WHEN).asText();
         LocalDate localDate = ZonedDateTime.parse(date).toLocalDate();
         List<String> commentsList = new ArrayList<>();
         Iterator<JsonNode> comments = node.path(CHILDREN_PATH).path(COMMENT_PATH).path(RESULT_PATH).elements();

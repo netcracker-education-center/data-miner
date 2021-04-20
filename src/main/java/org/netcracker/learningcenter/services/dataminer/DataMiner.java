@@ -19,10 +19,7 @@ import org.netcracker.learningcenter.utils.Validations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * This class represents Data miner which searches and collects relevant data by request
@@ -135,12 +132,12 @@ public class DataMiner {
     /**
      * Creates a DataMiner instance
      *
-     * @param dataMinerService     current DataMinerService instance
-     * @param objectMapper         current ObjectMapper instance
-     * @param jiraOperations       current JiraOperations instance
-     * @param ftpServerOperations  current FtpServerOperations instance
+     * @param dataMinerService current DataMinerService instance
+     * @param objectMapper current ObjectMapper instance
+     * @param jiraOperations current JiraOperations instance
+     * @param ftpServerOperations current FtpServerOperations instance
      * @param confluenceOperations current ConfluenceOperations instance
-     * @param aes256TextEncryptor  current AES256TextEncryptor instance
+     * @param aes256TextEncryptor current AES256TextEncryptor instance
      */
     @Autowired
     public DataMiner(DataMinerService dataMinerService, ObjectMapper objectMapper, JiraOperations jiraOperations,
@@ -155,10 +152,10 @@ public class DataMiner {
     }
 
     /**
-     * Collects Jira Issues from all provided sources
+     * Collects Jira-issues from all provided sources
      *
-     * @param jsonNode        JSON with required fields
-     * @param requestId       id of the current request
+     * @param jsonNode JSON with required fields
+     * @param requestId id of the current request
      * @param jiraCredentials list of Jira credentials to be able to collect data by their url
      * @throws ResourceNotFoundException if JsonNode mandatory field is missing
      */
@@ -188,8 +185,8 @@ public class DataMiner {
     /**
      * Collects FTP-server file objects from all provided sources
      *
-     * @param jsonNode             JSON with required fields
-     * @param requestId            id of the current request
+     * @param jsonNode JSON with required fields
+     * @param requestId id of the current request
      * @param ftpServerCredentials list of FTP-server credentials to be able to collect data by their ip addresses
      * @throws ResourceNotFoundException if JsonNode mandatory field is missing
      */
@@ -229,6 +226,36 @@ public class DataMiner {
     }
 
     /**
+     * Collects Confluence-pages from all provided sources
+     *
+     * @param jsonNode JSON with required fields
+     * @param requestId id of the current request
+     * @param confluenceCredentials list of Confluence credentials to be able to collect data by their url
+     * @throws ResourceNotFoundException if JsonNode mandatory field is missing
+     */
+    private void collectConfluencePages(JsonNode jsonNode, String requestId,
+                                        List<ConfluenceCredentials> confluenceCredentials)
+            throws ResourceNotFoundException {
+        JsonNode confluencePagesDate = jsonNode.at(CONFLUENCE_PAGES_DATE);
+        JsonNode cql = jsonNode.at(CQL);
+
+        Validations.checkJsonNode(confluencePagesDate, cql);
+
+        for (ConfluenceCredentials credentials : confluenceCredentials) {
+            String confluenceToken = credentials.getToken();
+            String confluenceUrl = credentials.getUrl();
+
+            if (!cql.isEmpty()) {
+                dataMinerService.addConfluencePagesUsingCql(confluenceToken, confluenceUrl,
+                        cql.asText(), requestId);
+            } else if (!jsonNode.path(KEYWORDS).isEmpty()) {
+                dataMinerService.addConfluencePagesUsingKeywords(confluenceToken, confluenceUrl,
+                        keywordsList, confluencePagesDate.asText(), requestId);
+            }
+        }
+    }
+
+    /**
      * Collects all found data from different sources(e.g. Jira, FTP server) in the ES database
      *
      * @param jsonNode JSON with required fields
@@ -255,11 +282,11 @@ public class DataMiner {
 
         if (sources.isArray()) {
             for (JsonNode arrayItem : sources) {
-                if (arrayItem.get(SOURCE).asText().equals(Source.JIRA.name())) {
+                if (arrayItem.get(SOURCE).asText().equals(Source.JIRA.name().toLowerCase(Locale.ROOT))) {
                     jiraCredentials.add(jiraOperations.getJiraCredentialsByUrl(arrayItem.get(CREDENTIAL_ID).asText()));
-                } else if (arrayItem.get(SOURCE).asText().equals(Source.FTP.name())) {
+                } else if (arrayItem.get(SOURCE).asText().equals(Source.FTP.name().toLowerCase(Locale.ROOT))) {
                     ftpServerCredentials.addAll(ftpServerOperations.getFtpServerCredentialsByServer(arrayItem.get(CREDENTIAL_ID).asText()));
-                } else if (arrayItem.get(SOURCE).asText().equals(Source.CONFLUENCE.name())) {
+                } else if (arrayItem.get(SOURCE).asText().equals(Source.CONFLUENCE.name().toLowerCase(Locale.ROOT))) {
                     confluenceCredentials.add(confluenceOperations.getConfluenceCredentialsByUrl(arrayItem.get(CREDENTIAL_ID).asText()));
                 }
             }
@@ -270,6 +297,9 @@ public class DataMiner {
         }
         if (!ftpServerCredentials.isEmpty()) {
             collectFtpFileObjects(jsonNode, requestId, ftpServerCredentials);
+        }
+        if (!confluenceCredentials.isEmpty()) {
+            collectConfluencePages(jsonNode, requestId, confluenceCredentials);
         }
         return objectMapper.valueToTree(new DataMinerDto(userId.asText(), requestId, keywordsList));
     }
