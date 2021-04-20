@@ -21,7 +21,7 @@ import static org.netcracker.learningcenter.utils.ConfluenceUtils.*;
 public class ConfluenceClient {
     public static final String CQL_SEARCH = "/rest/api/content/search";
     public static final String BODY = "body.storage";
-    public static final String CREATED_DATE = "history.createdDate";
+    public static final String LAST_UPDATED = "history.lastUpdated";
     public static final String COMMENTS = "children.comment.body.storage";
     private static final Logger LOG = LogManager.getLogger(ConfluenceClient.class);
     private final WebClient confluenceClient;
@@ -63,7 +63,7 @@ public class ConfluenceClient {
         return mapper.readTree(confluenceClient.get()
                 .uri(uriBuilder -> uriBuilder.path(CQL_SEARCH)
                         .queryParam(CQL, cql)
-                        .queryParam(EXPAND, buildExpandParam(BODY, CREATED_DATE, COMMENTS))
+                        .queryParam(EXPAND, buildExpandParam(BODY, LAST_UPDATED, COMMENTS))
                         .build())
                 .retrieve()
                 .bodyToMono(String.class)
