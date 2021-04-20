@@ -8,17 +8,17 @@ public class ConfluencePageModel {
     private String webLink;
     private String body;
     private List<String> comments;
-    private LocalDate lastUpdated;
+    private LocalDate modificationDate;
 
     public ConfluencePageModel() {
     }
 
-    public ConfluencePageModel(String title, String webLink, String body, List<String> comments,LocalDate lastUpdated) {
+    public ConfluencePageModel(String title, String webLink, String body, List<String> comments, LocalDate modificationDate) {
         this.title = title;
         this.webLink = webLink;
         this.body = body;
         this.comments = comments;
-        this.lastUpdated = lastUpdated;
+        this.modificationDate = modificationDate;
     }
 
     public String getTitle() {
@@ -49,12 +49,12 @@ public class ConfluencePageModel {
         return comments;
     }
 
-    public LocalDate getLastUpdated() {
-        return lastUpdated;
+    public LocalDate getModificationDate() {
+        return modificationDate;
     }
 
-    public void setLastUpdated(LocalDate lastUpdated) {
-        this.lastUpdated = lastUpdated;
+    public void setModificationDate(LocalDate modificationDate) {
+        this.modificationDate = modificationDate;
     }
 
     public void setComments(List<String> comments) {
@@ -68,7 +68,7 @@ public class ConfluencePageModel {
                 ", webLink='" + webLink + '\'' +
                 ", body='" + body + '\'' +
                 ", comments=" + comments +
-                ", lastUpdated=" + lastUpdated +
+                ", modificationDate=" + modificationDate +
                 '}';
     }
 }
