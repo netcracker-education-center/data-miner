@@ -207,21 +207,19 @@ public class DataMiner {
 
             FtpClient client = new FtpClient(ftpServer, ftpPort, ftpLogin, ftpPassword);
 
-            if (!jPath.isEmpty()) {
-                List<FTPFileFilter> filters = new ArrayList<>();
-                if (!jDateFilter.isMissingNode()) {
-                    filters.add(new DateFilter(jDateFilter.asText()));
-                }
-                if (!jExtensionFilter.isMissingNode()) {
-                    List<String> extensions = new ArrayList<>();
-                    Iterator<JsonNode> extFilter = jExtensionFilter.elements();
-                    while (extFilter.hasNext()) {
-                        extensions.add(extFilter.next().asText());
-                    }
-                    filters.add(new ExtensionFilter(extensions));
-                }
-                dataMinerService.addFileData(client, jPath.asText(), filters, requestId);
+            List<FTPFileFilter> filters = new ArrayList<>();
+            if (!jDateFilter.isMissingNode()) {
+                filters.add(new DateFilter(jDateFilter.asText()));
             }
+            if (!jExtensionFilter.isMissingNode()) {
+                List<String> extensions = new ArrayList<>();
+                Iterator<JsonNode> extFilter = jExtensionFilter.elements();
+                while (extFilter.hasNext()) {
+                    extensions.add(extFilter.next().asText());
+                }
+                filters.add(new ExtensionFilter(extensions));
+            }
+            dataMinerService.addFileData(client, jPath.asText(), filters, requestId);
         }
     }
 
