@@ -208,10 +208,10 @@ public class DataMiner {
             FtpClient client = new FtpClient(ftpServer, ftpPort, ftpLogin, ftpPassword);
 
             List<FTPFileFilter> filters = new ArrayList<>();
-            if (!jDateFilter.isMissingNode()) {
+            if (!jDateFilter.isEmpty()) {
                 filters.add(new DateFilter(jDateFilter.asText()));
             }
-            if (!jExtensionFilter.isMissingNode()) {
+            if (!jExtensionFilter.isEmpty()) {
                 List<String> extensions = new ArrayList<>();
                 Iterator<JsonNode> extFilter = jExtensionFilter.elements();
                 while (extFilter.hasNext()) {
