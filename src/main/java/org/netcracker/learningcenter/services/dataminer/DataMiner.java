@@ -130,6 +130,11 @@ public class DataMiner {
     List<String> keywordsList;
 
     /**
+     * List of selected sources
+     */
+    List<String> selectedSources;
+
+    /**
      * Creates a DataMiner instance
      *
      * @param dataMinerService current DataMinerService instance
@@ -274,6 +279,11 @@ public class DataMiner {
             keywordsList.add(keyword.asText());
         }
 
+        selectedSources = new ArrayList<>();
+        for (JsonNode source : sources) {
+            selectedSources.add(source.get(CREDENTIAL_ID).asText());
+        }
+
         List<JiraCredentials> jiraCredentials = new ArrayList<>();
         List<FtpServerCredentials> ftpServerCredentials = new ArrayList<>();
         List<ConfluenceCredentials> confluenceCredentials = new ArrayList<>();
@@ -299,6 +309,6 @@ public class DataMiner {
         if (!confluenceCredentials.isEmpty()) {
             collectConfluencePages(jsonNode, requestId, confluenceCredentials);
         }
-        return objectMapper.valueToTree(new DataMinerDto(userId.asText(), requestId, keywordsList));
+        return objectMapper.valueToTree(new DataMinerDto(userId.asText(), requestId, keywordsList, selectedSources));
     }
 }

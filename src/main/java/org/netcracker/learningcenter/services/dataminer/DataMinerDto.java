@@ -24,6 +24,7 @@ public class DataMinerDto {
      */
     private List<String> keywordsList;
 
+    private List<String> selectedSources;
     /**
      * Creates a new DataMinerDto instance with the given user id, request id and keywords
      *
@@ -31,10 +32,11 @@ public class DataMinerDto {
      * @param requestId current request id
      * @param keywordsList keywords used to select the desired (relevant) Jira-issues
      */
-    public DataMinerDto(String userId, String requestId, List<String> keywordsList) {
+    public DataMinerDto(String userId, String requestId, List<String> keywordsList, List<String> selectedSources) {
         this.userId = userId;
         this.requestId = requestId;
         this.keywordsList = keywordsList;
+        this.selectedSources = selectedSources;
     }
 
     /**
@@ -77,5 +79,19 @@ public class DataMinerDto {
      */
     public void setKeywordsList(List<String> keywordsList) {
         this.keywordsList = keywordsList;
+    }
+
+    /**
+     * @return user selected sources
+     */
+    public List<String> getSelectedSources() {
+        return selectedSources;
+    }
+
+    /**
+     * @param selectedSources user sources to set
+     */
+    public void setSelectedSources(List<String> selectedSources) {
+        this.selectedSources = selectedSources;
     }
 }
